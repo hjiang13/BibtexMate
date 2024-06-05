@@ -11,13 +11,18 @@ logging.basicConfig(level=logging.INFO)
 
 def extract_references(paragraph):
     # Split references by newline or bracketed number pattern
-    references = re.split(r'\n\s*\[?\d*\]?\s*', paragraph.strip())
+    references = re.split(r'\n\s*\[?\d+\]?\s*', paragraph.strip())
     references = [ref for ref in references if ref.strip()]
     return references
 
 def extract_title(reference):
     # Match patterns for different citation styles
-    match = re.search(r'\.\s+([^\.]+?)\.\s+(In:|Proceedings of|IEEE|ACM|Design Automation Conference|pp\.)', reference)
+    match = re.search(r'\.\s+([^\.]+?)\.\s+(In:|Proceedings of|IEEE|ACM|Design Automation Conference|pp\.|arXiv preprint|Cognitive Psychology)', reference)
+    if match:
+        title = match.group(1).strip()
+        return title
+    # If no match is found, try another pattern that matches the common format
+    match = re.search(r'\.\s+([^\.]+?)\.\s+\d{4}', reference)
     if match:
         title = match.group(1).strip()
         return title
