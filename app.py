@@ -2,7 +2,7 @@ import fitz  # PyMuPDF
 import re
 import os
 from flask import Flask, request, render_template, redirect, url_for
-from scholarly import scholarly
+from scholarly import scholarly, ProxyGenerator
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
@@ -44,11 +44,12 @@ def extract_references(references_text):
     return [ref.strip() for ref in references if len(ref.strip()) > 10]
 
 def search_scholar_for_bibtex(reference):
-    search_query = scholarly.search_pubs(reference)
     try:
+        search_query = scholarly.search_pubs(reference)
         pub = next(search_query)
         return pub.bibtex
-    except StopIteration:
+    except Exception as e:
+        print(f"Error fetching BibTeX for reference '{reference}': {e}")
         return None
 
 def format_references_as_bibtex(references):
@@ -63,24 +64,28 @@ def format_references_as_bibtex(references):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            return redirect(request.url)
-        file = request.files['file']
-        if file.filename == '':
-            return redirect(request.url)
-        if file:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(filepath)
-            text = extract_text_from_pdf(filepath)
-            references_text = find_references_section(text)
-            if references_text:
-                references = extract_references(references_text)
-                bibtex_entries = format_references_as_bibtex(references)
-                return render_template('index.html', bibtex_entries=bibtex_entries)
-            else:
-                return render_template('index.html', error="References section not found.")
-    return render_template('index.html')
+    try:
+        if request.method == 'POST':
+            if 'file' not in request.files:
+                return redirect(request.url)
+            file = request.files['file']
+            if file.filename == '':
+                return redirect(request.url)
+            if file:
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+                file.save(filepath)
+                text = extract_text_from_pdf(filepath)
+                references_text = find_references_section(text)
+                if references_text:
+                    references = extract_references(references_text)
+                    bibtex_entries = format_references_as_bibtex(references)
+                    return render_template('index.html', bibtex_entries=bibtex_entries)
+                else:
+                    return render_template('index.html', error="References section not found.")
+        return render_template('index.html')
+    except Exception as e:
+        print(f"Error in index route: {e}")
+        return render_template('index.html', error="An internal error occurred. Please try again later.")
 
 if __name__ == '__main__':
     if not os.path.exists('uploads'):
