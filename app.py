@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from flask import Flask, request, render_template
 import logging
@@ -8,49 +9,34 @@ app = Flask(__name__)
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
 
-def search_crossref_for_bibtex(title):
-    try:
-        url = "https://api.crossref.org/works"
-        headers = {"Accept": "application/json"}
-        params = {"query.title": title, "rows": 1}
+def extract_references(paragraph):
+    references = re.split(r'\n\[?\d+\]?\s+', paragraph.strip())
+    references = [ref for ref in references if ref.strip()]
+    return references
 
-        response = requests.get(url, headers=headers, params=params)
-        logging.info(f"Title search response for '{title}': {response.status_code} - {response.json()}")
+def extract_title(reference):
+    match = re.search(r'\.\s+([^\.]+?)\.\s+\d{4}', reference)
+    if match:
+        title = match.group(1).strip()
+        return title
+    return None
 
-        if response.status_code == 200:
-            data = response.json()
-            if data["message"]["items"]:
-                item = data["message"]["items"][0]
-                doi = item.get("DOI")
-                if doi:
-                    bibtex_url = f"https://doi.org/{doi}"
-                    bibtex_response = requests.get(bibtex_url, headers={"Accept": "application/x-bibtex"})
-                    logging.info(f"BibTeX response for '{title}': {bibtex_response.status_code} - {bibtex_response.text}")
-
-                    if bibtex_response.status_code == 200:
-                        return bibtex_response.text
-        return None
-    except Exception as e:
-        logging.error(f"Error in search_crossref_for_bibtex for '{title}': {e}")
-        return None
+def extract_titles_from_paragraph(paragraph):
+    references = extract_references(paragraph)
+    titles = [extract_title(ref) for ref in references]
+    return [title for title in titles if title]
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     try:
         if request.method == 'POST':
-            titles = request.form.get('titles')
-            if titles:
-                titles_list = titles.split('\n')
-                results = {}
-                for title in titles_list:
-                    title = title.strip()
-                    if title:
-                        bibtex_entry = search_crossref_for_bibtex(title)
-                        if bibtex_entry:
-                            results[title] = bibtex_entry
-                        else:
-                            results[title] = "No BibTeX entry found for this title."
-                return render_template('index.html', results=results)
+            paragraph = request.form.get('paragraph')
+            if paragraph:
+                titles = extract_titles_from_paragraph(paragraph)
+                if titles:
+                    return render_template('index.html', titles=titles)
+                else:
+                    return render_template('index.html', error="No titles found in the provided paragraph.")
         return render_template('index.html')
     except Exception as e:
         logging.error(f"Error in index route: {e}")
