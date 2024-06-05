@@ -15,21 +15,62 @@ def extract_text_from_pdf(pdf_path):
     return text
 
 def find_references_section(text):
-    headings = ["References", "Bibliography", "Works Cited", "Literature Cited"]
-    for heading in headings:
+    start_headings = ["References", "Bibliography", "Works Cited", "Literature Cited"]
+    end_headings = ["Appendix", "Author Biographies", "About the Authors"]
+
+    start = None
+    end = None
+
+    for heading in start_headings:
         pattern = re.compile(r'\b' + re.escape(heading) + r'\b', re.IGNORECASE)
         match = pattern.search(text)
         if match:
-            return text[match.start():]
-    return ""
+            start = match.start()
+            break
+
+    if start is not None:
+        for heading in end_headings:
+            pattern = re.compile(r'\b' + re.escape(heading) + r'\b', re.IGNORECASE)
+            match = pattern.search(text, start)
+            if match:
+                end = match.start()
+                break
+
+    return text[start:end] if start is not None else ""
 
 def extract_references(references_text):
     references = re.split(r'\n(?:\d+\.|[\[\(]\d+[\]\)])\s+', references_text)
     return [ref.strip() for ref in references if len(ref.strip()) > 10]
 
+def extract_reference_details(ref):
+    first_author = "Unknown"
+    year = "n.d."
+    title = "Unknown"
+
+    author_match = re.search(r'([A-Z][a-z]+),?\s+[A-Z]\.', ref)
+    if author_match:
+        first_author = author_match.group(1)
+
+    year_match = re.search(r'\b(19|20)\d{2}\b', ref)
+    if year_match:
+        year = year_match.group(0)
+
+    title_match = re.search(r'“([^”]+)', ref)
+    if title_match:
+        title = title_match.group(1).split()[0]
+    else:
+        title_match = re.search(r'^[A-Z][a-z]+\s+\d{4}\.\s+(.*?)\.', ref, re.MULTILINE)
+        if title_match:
+            title = title_match.group(1).split()[0]
+
+    return first_author, year, title
+
 def format_references_as_bibtex(references):
     bibtex_entries = []
     for i, ref in enumerate(references):
+        first_author, year, title = extract_reference_details(ref)
+        bibtex_key = f"{first_author}{year}{title}"
+
         if 'doi' in ref.lower():
             entry_type = '@article'
         elif 'conference' in ref.lower() or 'proceedings' in ref.lower():
@@ -38,7 +79,8 @@ def format_references_as_bibtex(references):
             entry_type = '@book'
         else:
             entry_type = '@misc'
-        bibtex_entry = f"{entry_type}{{ref{i},\n  note = {{{ref}}}\n}}"
+        
+        bibtex_entry = f"{entry_type}{{{bibtex_key},\n  note = {{{ref}}}\n}}"
         bibtex_entries.append(bibtex_entry)
     return bibtex_entries
 
