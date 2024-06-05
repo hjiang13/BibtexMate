@@ -6,6 +6,22 @@
     <title>BibtexMate</title>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        function copyToClipboard(elementId) {
+            var copyText = document.getElementById(elementId);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); /* For mobile devices */
+            document.execCommand("copy");
+
+            var tooltip = document.getElementById(elementId + "-tooltip");
+            tooltip.innerHTML = "Copied!";
+        }
+
+        function resetTooltip(elementId) {
+            var tooltip = document.getElementById(elementId + "-tooltip");
+            tooltip.innerHTML = "Copy to clipboard";
+        }
+    </script>
 </head>
 <body>
     <div class="container mt-5">
@@ -27,7 +43,10 @@
                         <div class="card mb-3">
                             <div class="card-body">
                                 <h5 class="card-title">{{ title }}</h5>
-                                <pre>{{ bibtex }}</pre>
+                                <textarea id="bibtex-{{ loop.index }}" class="form-control" readonly>{{ bibtex }}</textarea>
+                                <button class="btn btn-secondary mt-2" onclick="copyToClipboard('bibtex-{{ loop.index }}')" onmouseout="resetTooltip('bibtex-{{ loop.index }}')">
+                                    <span class="tooltip-text" id="bibtex-{{ loop.index }}-tooltip">Copy to clipboard</span>
+                                </button>
                             </div>
                         </div>
                     {% endfor %}
