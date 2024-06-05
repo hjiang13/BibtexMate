@@ -11,30 +11,32 @@ def extract_text_from_pdf(pdf_path):
     text = ""
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)
-        text += page.get_text()
+        text += page.get_text("text")
     return text
 
 def find_references_section(text):
-    pattern = re.compile(r'(references|bibliography|works cited)', re.IGNORECASE)
+    pattern = re.compile(r'\b(references|bibliography|works cited)\b', re.IGNORECASE)
     match = pattern.search(text)
     if match:
         return text[match.start():]
     return ""
 
 def extract_references(references_text):
-    references = references_text.split('\n')
-    return [ref for ref in references if len(ref) > 10]
+    references = re.split(r'\n\d+\.\s|\n-\s', references_text)
+    return [ref.strip() for ref in references if len(ref.strip()) > 10]
 
 def format_references_as_bibtex(references):
     bibtex_entries = []
-    for ref in references:
+    for i, ref in enumerate(references):
         if 'doi' in ref.lower():
             entry_type = '@article'
         elif 'conference' in ref.lower() or 'proceedings' in ref.lower():
             entry_type = '@inproceedings'
+        elif 'book' in ref.lower():
+            entry_type = '@book'
         else:
             entry_type = '@misc'
-        bibtex_entry = f"{entry_type}{{\n  {ref}\n}}"
+        bibtex_entry = f"{entry_type}{{ref{i},\n  note = {{{ref}}}\n}}"
         bibtex_entries.append(bibtex_entry)
     return bibtex_entries
 
