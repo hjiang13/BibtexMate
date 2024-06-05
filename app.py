@@ -1,3 +1,4 @@
+import os
 import requests
 from flask import Flask, request, render_template, redirect, url_for
 
@@ -23,15 +24,19 @@ def search_crossref_for_bibtex(title):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    if request.method == 'POST':
-        title = request.form.get('title')
-        if title:
-            bibtex_entry = search_crossref_for_bibtex(title)
-            if bibtex_entry:
-                return render_template('index.html', bibtex_entry=bibtex_entry)
-            else:
-                return render_template('index.html', error="No BibTeX entry found for the given title.")
-    return render_template('index.html')
+    try:
+        if request.method == 'POST':
+            title = request.form.get('title')
+            if title:
+                bibtex_entry = search_crossref_for_bibtex(title)
+                if bibtex_entry:
+                    return render_template('index.html', bibtex_entry=bibtex_entry)
+                else:
+                    return render_template('index.html', error="No BibTeX entry found for the given title.")
+        return render_template('index.html')
+    except Exception as e:
+        print(f"Error in index route: {e}")
+        return render_template('index.html', error="An internal error occurred. Please try again later.")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
