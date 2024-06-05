@@ -1,8 +1,8 @@
 import fitz  # PyMuPDF
 import re
 import os
+import requests
 from flask import Flask, request, render_template, redirect, url_for
-from scholarly import scholarly, ProxyGenerator
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
@@ -43,19 +43,28 @@ def extract_references(references_text):
     references = re.split(r'\n(?:\d+\.|[\[\(]\d+[\]\)])\s+', references_text)
     return [ref.strip() for ref in references if len(ref.strip()) > 10]
 
-def search_scholar_for_bibtex(reference):
-    try:
-        search_query = scholarly.search_pubs(reference)
-        pub = next(search_query)
-        return pub.bibtex
-    except Exception as e:
-        print(f"Error fetching BibTeX for reference '{reference}': {e}")
-        return None
+def search_crossref_for_bibtex(reference):
+    url = "https://api.crossref.org/works"
+    headers = {"Accept": "application/json"}
+    params = {"query.bibliographic": reference, "rows": 1}
+    
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        if data["message"]["items"]:
+            item = data["message"]["items"][0]
+            doi = item.get("DOI")
+            if doi:
+                bibtex_url = f"https://doi.org/{doi}"
+                bibtex_response = requests.get(bibtex_url, headers={"Accept": "application/x-bibtex"})
+                if bibtex_response.status_code == 200:
+                    return bibtex_response.text
+    return None
 
 def format_references_as_bibtex(references):
     bibtex_entries = []
     for ref in references:
-        bibtex_entry = search_scholar_for_bibtex(ref)
+        bibtex_entry = search_crossref_for_bibtex(ref)
         if bibtex_entry:
             bibtex_entries.append(bibtex_entry)
         else:
