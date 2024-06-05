@@ -28,10 +28,10 @@ form {
     margin-bottom: 20px;
 }
 
-input[type="text"] {
+textarea {
     padding: 10px;
-    width: 80%;
-    max-width: 400px;
+    width: 100%;
+    max-width: 100%;
     margin-bottom: 10px;
 }
 
@@ -45,4 +45,8 @@ pre {
     padding: 10px;
     border-radius: 4px;
     overflow-x: auto;
+}
+
+.card {
+    margin-bottom: 10px;
 }

@@ -15,15 +15,22 @@
                 <p class="text-center">Effortless Reference Extraction for Researchers</p>
                 <form action="/" method="post">
                     <div class="form-group">
-                        <input type="text" class="form-control" name="title" placeholder="Enter the title of the paper" required>
+                        <textarea class="form-control" name="titles" rows="10" placeholder="Enter one title per line" required></textarea>
                     </div>
                     <div class="form-group text-center">
                         <button type="submit" class="btn btn-primary">Search</button>
                     </div>
                 </form>
-                {% if bibtex_entry %}
-                    <h2>Extracted BibTeX Entry</h2>
-                    <pre>{{ bibtex_entry }}</pre>
+                {% if results %}
+                    <h2>Extracted BibTeX Entries</h2>
+                    {% for title, bibtex in results.items() %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ title }}</h5>
+                                <pre>{{ bibtex }}</pre>
+                            </div>
+                        </div>
+                    {% endfor %}
                 {% elif error %}
                     <p class="text-danger">{{ error }}</p>
                 {% endif %}
