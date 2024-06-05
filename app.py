@@ -29,7 +29,13 @@ def search_crossref_for_references(title):
 
                     if references_response.status_code == 200:
                         references_data = references_response.json()
-                        return references_data.get("message", {}).get("reference", [])
+                        references = references_data.get("message", {}).get("reference", [])
+                        logging.info(f"Found {len(references)} references")
+                        return references
+                    else:
+                        logging.warning(f"References not found for DOI: {doi}")
+            else:
+                logging.warning(f"No items found for the title: {title}")
         return []
     except Exception as e:
         logging.error(f"Error in search_crossref_for_references: {e}")
