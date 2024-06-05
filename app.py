@@ -10,12 +10,16 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def extract_references(paragraph):
-    references = re.split(r'\n\[?\d+\]?\s+', paragraph.strip())
+    references = re.split(r'\n\s*\d*\s*', paragraph.strip())
     references = [ref for ref in references if ref.strip()]
     return references
 
 def extract_title(reference):
-    match = re.search(r'\.\s+([^\.]+?)\.\s+\d{4}', reference)
+    # Match patterns for different citation styles
+    match = re.search(r'(?<!\.)\.\s+([^\.]+?)\.\s+\b(?:In:|IEEE|ACM|Proceedings of|Design Automation Conference)\b', reference)
+    if not match:
+        # Try another pattern
+        match = re.search(r'(?<!\.)\.\s+([^\.]+?)\.\s+\d{4}', reference)
     if match:
         title = match.group(1).strip()
         return title
