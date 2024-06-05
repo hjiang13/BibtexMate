@@ -1,45 +1,27 @@
 import os
 import requests
-from flask import Flask, request, render_template
-import logging
+from flask import Flask, request, render_template, redirect, url_for
+from urllib.parse import quote as url_quote
 
 app = Flask(__name__)
 
-# Set up basic logging
-logging.basicConfig(level=logging.INFO)
-
-def search_crossref_for_references(title):
-    try:
-        url = "https://api.crossref.org/works"
-        headers = {"Accept": "application/json"}
-        params = {"query.title": title, "rows": 1}
-
-        response = requests.get(url, headers=headers, params=params)
-        logging.info(f"Title search response: {response.status_code} - {response.json()}")
-
-        if response.status_code == 200:
-            data = response.json()
-            if data["message"]["items"]:
-                item = data["message"]["items"][0]
-                doi = item.get("DOI")
-                if doi:
-                    references_url = f"https://api.crossref.org/works/{doi}/references"
-                    references_response = requests.get(references_url, headers=headers)
-                    logging.info(f"References response: {references_response.status_code} - {references_response.json()}")
-
-                    if references_response.status_code == 200:
-                        references_data = references_response.json()
-                        references = references_data.get("message", {}).get("reference", [])
-                        logging.info(f"Found {len(references)} references")
-                        return references
-                    else:
-                        logging.warning(f"References not found for DOI: {doi}")
-            else:
-                logging.warning(f"No items found for the title: {title}")
-        return []
-    except Exception as e:
-        logging.error(f"Error in search_crossref_for_references: {e}")
-        return []
+def search_crossref_for_bibtex(title):
+    url = "https://api.crossref.org/works"
+    headers = {"Accept": "application/json"}
+    params = {"query.title": title, "rows": 1}
+    
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        if data["message"]["items"]:
+            item = data["message"]["items"][0]
+            doi = item.get("DOI")
+            if doi:
+                bibtex_url = f"https://doi.org/{url_quote(doi)}"
+                bibtex_response = requests.get(bibtex_url, headers={"Accept": "application/x-bibtex"})
+                if bibtex_response.status_code == 200:
+                    return bibtex_response.text
+    return None
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -47,14 +29,14 @@ def index():
         if request.method == 'POST':
             title = request.form.get('title')
             if title:
-                references = search_crossref_for_references(title)
-                if references:
-                    return render_template('index.html', references=references)
+                bibtex_entry = search_crossref_for_bibtex(title)
+                if bibtex_entry:
+                    return render_template('index.html', bibtex_entry=bibtex_entry)
                 else:
-                    return render_template('index.html', error="No references found for the given title.")
+                    return render_template('index.html', error="No BibTeX entry found for the given title.")
         return render_template('index.html')
     except Exception as e:
-        logging.error(f"Error in index route: {e}")
+        print(f"Error in index route: {e}")
         return render_template('index.html', error="An internal error occurred. Please try again later.")
 
 if __name__ == '__main__':
