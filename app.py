@@ -15,14 +15,16 @@ def extract_text_from_pdf(pdf_path):
     return text
 
 def find_references_section(text):
-    pattern = re.compile(r'\b(references|bibliography|works cited)\b', re.IGNORECASE)
-    match = pattern.search(text)
-    if match:
-        return text[match.start():]
+    headings = ["References", "Bibliography", "Works Cited", "Literature Cited"]
+    for heading in headings:
+        pattern = re.compile(r'\b' + re.escape(heading) + r'\b', re.IGNORECASE)
+        match = pattern.search(text)
+        if match:
+            return text[match.start():]
     return ""
 
 def extract_references(references_text):
-    references = re.split(r'\n\d+\.\s|\n-\s', references_text)
+    references = re.split(r'\n(?:\d+\.|[\[\(]\d+[\]\)])\s+', references_text)
     return [ref.strip() for ref in references if len(ref.strip()) > 10]
 
 def format_references_as_bibtex(references):
@@ -53,9 +55,12 @@ def index():
             file.save(filepath)
             text = extract_text_from_pdf(filepath)
             references_text = find_references_section(text)
-            references = extract_references(references_text)
-            bibtex_entries = format_references_as_bibtex(references)
-            return render_template('index.html', bibtex_entries=bibtex_entries)
+            if references_text:
+                references = extract_references(references_text)
+                bibtex_entries = format_references_as_bibtex(references)
+                return render_template('index.html', bibtex_entries=bibtex_entries)
+            else:
+                return render_template('index.html', error="References section not found.")
     return render_template('index.html')
 
 if __name__ == '__main__':
