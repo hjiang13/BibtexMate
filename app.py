@@ -1,11 +1,10 @@
 import os
 import requests
-from flask import Flask, request, render_template, redirect, url_for
-from urllib.parse import quote as url_quote
+from flask import Flask, request, render_template
 
 app = Flask(__name__)
 
-def search_crossref_for_bibtex(title):
+def search_crossref_for_references(title):
     url = "https://api.crossref.org/works"
     headers = {"Accept": "application/json"}
     params = {"query.title": title, "rows": 1}
@@ -17,11 +16,12 @@ def search_crossref_for_bibtex(title):
             item = data["message"]["items"][0]
             doi = item.get("DOI")
             if doi:
-                bibtex_url = f"https://doi.org/{url_quote(doi)}"
-                bibtex_response = requests.get(bibtex_url, headers={"Accept": "application/x-bibtex"})
-                if bibtex_response.status_code == 200:
-                    return bibtex_response.text
-    return None
+                references_url = f"https://api.crossref.org/works/{doi}/references"
+                references_response = requests.get(references_url, headers=headers)
+                if references_response.status_code == 200:
+                    references_data = references_response.json()
+                    return references_data.get("message", {}).get("reference", [])
+    return []
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -29,11 +29,11 @@ def index():
         if request.method == 'POST':
             title = request.form.get('title')
             if title:
-                bibtex_entry = search_crossref_for_bibtex(title)
-                if bibtex_entry:
-                    return render_template('index.html', bibtex_entry=bibtex_entry)
+                references = search_crossref_for_references(title)
+                if references:
+                    return render_template('index.html', references=references)
                 else:
-                    return render_template('index.html', error="No BibTeX entry found for the given title.")
+                    return render_template('index.html', error="No references found for the given title.")
         return render_template('index.html')
     except Exception as e:
         print(f"Error in index route: {e}")
