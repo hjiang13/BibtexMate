@@ -25,7 +25,10 @@
                     <h2>Extracted References</h2>
                     <ul class="list-group">
                         {% for ref in references %}
-                            <li class="list-group-item">{{ ref.DOI }} - {{ ref['article-title'] if 'article-title' in ref else ref['journal-title'] if 'journal-title' in ref else 'Reference' }}</li>
+                            <li class="list-group-item">
+                                {{ ref.DOI if 'DOI' in ref else '' }} - 
+                                {{ ref['article-title'] if 'article-title' in ref else ref['journal-title'] if 'journal-title' in ref else 'Reference' }}
+                            </li>
                         {% endfor %}
                     </ul>
                 {% elif error %}
