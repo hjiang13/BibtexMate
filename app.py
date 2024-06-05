@@ -17,7 +17,7 @@ def extract_references(paragraph):
 
 def extract_title(reference):
     # Match patterns for different citation styles
-    match = re.search(r'\.\s+([^\.]+?)\.\s+(In:|Proceedings of|IEEE|ACM|Design Automation Conference|pp\.|arXiv preprint|Cognitive Psychology)', reference)
+    match = re.search(r'\.\s+([^\.]+?)\.\s+(\d{4}|arXiv|In:|Proceedings of|IEEE|ACM|Cognitive Psychology|Design Automation Conference|pp\.|volume \d+)', reference)
     if match:
         title = match.group(1).strip()
         return title
