@@ -1,6 +1,7 @@
 import os
 import requests
 from flask import Flask, request, render_template, redirect, url_for
+from urllib.parse import quote as url_quote
 
 app = Flask(__name__)
 
@@ -16,7 +17,7 @@ def search_crossref_for_bibtex(title):
             item = data["message"]["items"][0]
             doi = item.get("DOI")
             if doi:
-                bibtex_url = f"https://doi.org/{doi}"
+                bibtex_url = f"https://doi.org/{url_quote(doi)}"
                 bibtex_response = requests.get(bibtex_url, headers={"Accept": "application/x-bibtex"})
                 if bibtex_response.status_code == 200:
                     return bibtex_response.text
