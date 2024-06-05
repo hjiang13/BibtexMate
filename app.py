@@ -2,6 +2,7 @@ import fitz  # PyMuPDF
 import re
 import os
 from flask import Flask, request, render_template, redirect, url_for
+from scholarly import scholarly
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
@@ -42,46 +43,22 @@ def extract_references(references_text):
     references = re.split(r'\n(?:\d+\.|[\[\(]\d+[\]\)])\s+', references_text)
     return [ref.strip() for ref in references if len(ref.strip()) > 10]
 
-def extract_reference_details(ref):
-    first_author = "Unknown"
-    year = "n.d."
-    title = "Unknown"
-
-    author_match = re.search(r'([A-Z][a-z]+),?\s+[A-Z]\.', ref)
-    if author_match:
-        first_author = author_match.group(1)
-
-    year_match = re.search(r'\b(19|20)\d{2}\b', ref)
-    if year_match:
-        year = year_match.group(0)
-
-    title_match = re.search(r'“([^”]+)', ref)
-    if title_match:
-        title = title_match.group(1).split()[0]
-    else:
-        title_match = re.search(r'^[A-Z][a-z]+\s+\d{4}\.\s+(.*?)\.', ref, re.MULTILINE)
-        if title_match:
-            title = title_match.group(1).split()[0]
-
-    return first_author, year, title
+def search_scholar_for_bibtex(reference):
+    search_query = scholarly.search_pubs(reference)
+    try:
+        pub = next(search_query)
+        return pub.bibtex
+    except StopIteration:
+        return None
 
 def format_references_as_bibtex(references):
     bibtex_entries = []
-    for i, ref in enumerate(references):
-        first_author, year, title = extract_reference_details(ref)
-        bibtex_key = f"{first_author}{year}{title}"
-
-        if 'doi' in ref.lower():
-            entry_type = '@article'
-        elif 'conference' in ref.lower() or 'proceedings' in ref.lower():
-            entry_type = '@inproceedings'
-        elif 'book' in ref.lower():
-            entry_type = '@book'
+    for ref in references:
+        bibtex_entry = search_scholar_for_bibtex(ref)
+        if bibtex_entry:
+            bibtex_entries.append(bibtex_entry)
         else:
-            entry_type = '@misc'
-        
-        bibtex_entry = f"{entry_type}{{{bibtex_key},\n  note = {{{ref}}}\n}}"
-        bibtex_entries.append(bibtex_entry)
+            bibtex_entries.append(f"@misc{{,\n  note = {{{ref}}}\n}}")
     return bibtex_entries
 
 @app.route('/', methods=['GET', 'POST'])
