@@ -40,4 +40,24 @@ button {
 }
 
 pre {
-   
+    text-align: left;
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.card {
+    margin-bottom: 10px;
+}
+
+.visit-counter {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background-color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    font-size: 0.9em;
+}
