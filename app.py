@@ -1,8 +1,12 @@
 import os
 import requests
 from flask import Flask, request, render_template
+import logging
 
 app = Flask(__name__)
+
+# Set up basic logging
+logging.basicConfig(level=logging.INFO)
 
 def search_crossref_for_references(title):
     url = "https://api.crossref.org/works"
@@ -10,6 +14,8 @@ def search_crossref_for_references(title):
     params = {"query.title": title, "rows": 1}
     
     response = requests.get(url, headers=headers, params=params)
+    logging.info(f"Title search response: {response.status_code} - {response.json()}")
+    
     if response.status_code == 200:
         data = response.json()
         if data["message"]["items"]:
@@ -18,6 +24,8 @@ def search_crossref_for_references(title):
             if doi:
                 references_url = f"https://api.crossref.org/works/{doi}/references"
                 references_response = requests.get(references_url, headers=headers)
+                logging.info(f"References response: {references_response.status_code} - {references_response.json()}")
+                
                 if references_response.status_code == 200:
                     references_data = references_response.json()
                     return references_data.get("message", {}).get("reference", [])
@@ -36,7 +44,7 @@ def index():
                     return render_template('index.html', error="No references found for the given title.")
         return render_template('index.html')
     except Exception as e:
-        print(f"Error in index route: {e}")
+        logging.error(f"Error in index route: {e}")
         return render_template('index.html', error="An internal error occurred. Please try again later.")
 
 if __name__ == '__main__':
