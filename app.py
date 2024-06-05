@@ -9,27 +9,31 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def search_crossref_for_references(title):
-    url = "https://api.crossref.org/works"
-    headers = {"Accept": "application/json"}
-    params = {"query.title": title, "rows": 1}
-    
-    response = requests.get(url, headers=headers, params=params)
-    logging.info(f"Title search response: {response.status_code} - {response.json()}")
-    
-    if response.status_code == 200:
-        data = response.json()
-        if data["message"]["items"]:
-            item = data["message"]["items"][0]
-            doi = item.get("DOI")
-            if doi:
-                references_url = f"https://api.crossref.org/works/{doi}/references"
-                references_response = requests.get(references_url, headers=headers)
-                logging.info(f"References response: {references_response.status_code} - {references_response.json()}")
-                
-                if references_response.status_code == 200:
-                    references_data = references_response.json()
-                    return references_data.get("message", {}).get("reference", [])
-    return []
+    try:
+        url = "https://api.crossref.org/works"
+        headers = {"Accept": "application/json"}
+        params = {"query.title": title, "rows": 1}
+
+        response = requests.get(url, headers=headers, params=params)
+        logging.info(f"Title search response: {response.status_code} - {response.json()}")
+
+        if response.status_code == 200:
+            data = response.json()
+            if data["message"]["items"]:
+                item = data["message"]["items"][0]
+                doi = item.get("DOI")
+                if doi:
+                    references_url = f"https://api.crossref.org/works/{doi}/references"
+                    references_response = requests.get(references_url, headers=headers)
+                    logging.info(f"References response: {references_response.status_code} - {references_response.json()}")
+
+                    if references_response.status_code == 200:
+                        references_data = references_response.json()
+                        return references_data.get("message", {}).get("reference", [])
+        return []
+    except Exception as e:
+        logging.error(f"Error in search_crossref_for_references: {e}")
+        return []
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
