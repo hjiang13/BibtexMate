@@ -4,22 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BibtexMate</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>BibtexMate</h1>
-        <p>Effortless Reference Extraction for Researchers</p>
-        <form action="/" method="post">
-            <input type="text" name="title" placeholder="Enter the title of the paper" required>
-            <button type="submit">Search</button>
-        </form>
-        {% if bibtex_entry %}
-            <h2>Extracted BibTeX Entry</h2>
-            <pre>{{ bibtex_entry }}</pre>
-        {% elif error %}
-            <p>{{ error }}</p>
-        {% endif %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <h1 class="text-center">BibtexMate</h1>
+                <p class="text-center">Effortless Reference Extraction for Researchers</p>
+                <form action="/" method="post">
+                    <div class="form-group">
+                        <input type="text" class="form-control" name="title" placeholder="Enter the title of the paper" required>
+                    </div>
+                    <div class="form-group text-center">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </div>
+                </form>
+                {% if bibtex_entry %}
+                    <h2>Extracted BibTeX Entry</h2>
+                    <pre>{{ bibtex_entry }}</pre>
+                {% elif error %}
+                    <p class="text-danger">{{ error }}</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
