@@ -12,7 +12,7 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Initialize visit count and visitor log
-visit_count = 0
+visit_count = 200
 visitor_log = []
 
 def get_visitor_location(ip):
