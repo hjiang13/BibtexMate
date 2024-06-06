@@ -3,7 +3,6 @@ import requests
 from flask import Flask, request, render_template, send_file
 import logging
 from io import StringIO
-import difflib
 
 app = Flask(__name__)
 
@@ -20,15 +19,14 @@ def search_crossref_for_reference(title, format):
     try:
         url = "https://api.crossref.org/works"
         headers = {"Accept": "application/json"}
-        params = {"query.title": title, "rows": 1}
+        params = {"query.title": title, "rows": 10}
 
         response = requests.get(url, headers=headers, params=params)
         logging.info(f"Title search response for '{title}': {response.status_code} - {response.json()}")
 
         if response.status_code == 200:
             data = response.json()
-            if data["message"]["items"]:
-                item = data["message"]["items"][0]
+            for item in data["message"]["items"]:
                 returned_title = item.get("title", [""])[0]
                 if is_exact_match(title, returned_title):
                     doi = item.get("DOI")
