@@ -3,11 +3,18 @@ import requests
 from flask import Flask, request, render_template, send_file
 import logging
 from io import StringIO
+import difflib
 
 app = Flask(__name__)
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
+
+def normalize_title(title):
+    return title.lower().strip()
+
+def is_exact_match(input_title, returned_title):
+    return normalize_title(input_title) == normalize_title(returned_title)
 
 def search_crossref_for_reference(title, format):
     try:
@@ -22,26 +29,28 @@ def search_crossref_for_reference(title, format):
             data = response.json()
             if data["message"]["items"]:
                 item = data["message"]["items"][0]
-                doi = item.get("DOI")
-                if doi:
-                    if format == "BibTeX":
-                        ref_url = f"https://doi.org/{doi}"
-                        ref_headers = {"Accept": "application/x-bibtex"}
-                    elif format == "RIS":
-                        ref_url = f"https://doi.org/{doi}"
-                        ref_headers = {"Accept": "application/x-research-info-systems"}
-                    elif format == "Vancouver":
-                        ref_url = f"https://doi.org/{doi}"
-                        ref_headers = {"Accept": "text/x-bibliography; style=vancouver"}
-                    elif format == "MLA":
-                        ref_url = f"https://doi.org/{doi}"
-                        ref_headers = {"Accept": "text/x-bibliography; style=mla"}
+                returned_title = item.get("title", [""])[0]
+                if is_exact_match(title, returned_title):
+                    doi = item.get("DOI")
+                    if doi:
+                        if format == "BibTeX":
+                            ref_url = f"https://doi.org/{doi}"
+                            ref_headers = {"Accept": "application/x-bibtex"}
+                        elif format == "RIS":
+                            ref_url = f"https://doi.org/{doi}"
+                            ref_headers = {"Accept": "application/x-research-info-systems"}
+                        elif format == "Vancouver":
+                            ref_url = f"https://doi.org/{doi}"
+                            ref_headers = {"Accept": "text/x-bibliography; style=vancouver"}
+                        elif format == "MLA":
+                            ref_url = f"https://doi.org/{doi}"
+                            ref_headers = {"Accept": "text/x-bibliography; style=mla"}
 
-                    ref_response = requests.get(ref_url, headers=ref_headers)
-                    logging.info(f"Reference response for '{title}': {ref_response.status_code} - {ref_response.text}")
+                        ref_response = requests.get(ref_url, headers=ref_headers)
+                        logging.info(f"Reference response for '{title}': {ref_response.status_code} - {ref_response.text}")
 
-                    if ref_response.status_code == 200:
-                        return ref_response.text
+                        if ref_response.status_code == 200:
+                            return ref_response.text
         return None
     except Exception as e:
         logging.error(f"Error in search_crossref_for_reference for '{title}': {e}")
