@@ -31,47 +31,11 @@
                 <p class="text-center">Effortless Reference Extraction for Researchers</p>
                 <form action="/" method="post">
                     <div class="form-group">
-                        <textarea class="form-control" name="titles" rows="10" placeholder="Enter one title per line" required></textarea>
+                        <textarea class="form-control" name="titles" rows="5" placeholder="Enter one title per line"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <textarea class="form-control" name="dois" rows="5" placeholder="Enter one DOI per line"></textarea>
                     </div>
                     <div class="form-group text-center">
                         <button formaction="/bibtex" formmethod="post" class="btn btn-primary">BibTeX Search</button>
-                        <button formaction="/ris" formmethod="post" class="btn btn-secondary">RIS Search</button>
-                        <button formaction="/vancouver" formmethod="post" class="btn btn-success">Vancouver Search</button>
-                        <button formaction="/mla" formmethod="post" class="btn btn-info">MLA Search</button>
-                    </div>
-                </form>
-                {% if results %}
-                    <h2>Extracted {{ format }} Entries</h2>
-                    {% for title, ref in results.items() %}
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ title }}</h5>
-                                <textarea id="ref-{{ loop.index }}" class="form-control" readonly>{{ ref }}</textarea>
-                                <button class="btn btn-secondary mt-2" onclick="copyToClipboard('ref-{{ loop.index }}')" onmouseout="resetTooltip('ref-{{ loop.index }}')">
-                                    <span class="tooltip-text" id="ref-{{ loop.index }}-tooltip">Copy to clipboard</span>
-                                </button>
-                            </div>
-                        </div>
-                    {% endfor %}
-                    {% if file_name %}
-                        <div class="text-center mt-4">
-                            <a href="/download/{{ file_name }}" class="btn btn-outline-primary">Download {{ format }} File</a>
-                        </div>
-                    {% endif %}
-                {% elif error %}
-                    <p class="text-danger">{{ error }}</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="visit-counter">
-        Page visits: {{ visit_count }}
-    </div>
-    <footer>
-        <p>&copy; 2024 Hailong Jiang (hjiang13 at kent.edu). All rights reserved.</p>
-    </footer>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-</body>
-</html>
+                        <button formaction="/

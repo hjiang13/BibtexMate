@@ -3,6 +3,7 @@ import requests
 from flask import Flask, request, render_template, send_file
 import logging
 from io import StringIO
+from difflib import SequenceMatcher
 
 app = Flask(__name__)
 
@@ -15,7 +16,10 @@ def normalize_title(title):
 def is_exact_match(input_title, returned_title):
     return normalize_title(input_title) == normalize_title(returned_title)
 
-def search_crossref_for_reference(title, format):
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+def search_crossref_for_reference_by_title(title, format):
     try:
         url = "https://api.crossref.org/works"
         headers = {"Accept": "application/json"}
@@ -26,45 +30,74 @@ def search_crossref_for_reference(title, format):
 
         if response.status_code == 200:
             data = response.json()
+            best_match = None
+            best_similarity = 0.0
             for item in data["message"]["items"]:
                 returned_title = item.get("title", [""])[0]
-                if is_exact_match(title, returned_title):
-                    doi = item.get("DOI")
-                    if doi:
-                        if format == "BibTeX":
-                            ref_url = f"https://doi.org/{doi}"
-                            ref_headers = {"Accept": "application/x-bibtex"}
-                        elif format == "RIS":
-                            ref_url = f"https://doi.org/{doi}"
-                            ref_headers = {"Accept": "application/x-research-info-systems"}
-                        elif format == "Vancouver":
-                            ref_url = f"https://doi.org/{doi}"
-                            ref_headers = {"Accept": "text/x-bibliography; style=vancouver"}
-                        elif format == "MLA":
-                            ref_url = f"https://doi.org/{doi}"
-                            ref_headers = {"Accept": "text/x-bibliography; style=mla"}
+                similarity = similar(normalize_title(title), normalize_title(returned_title))
+                if similarity > best_similarity:
+                    best_match = item
+                    best_similarity = similarity
 
-                        ref_response = requests.get(ref_url, headers=ref_headers)
-                        logging.info(f"Reference response for '{title}': {ref_response.status_code} - {ref_response.text}")
-
-                        if ref_response.status_code == 200:
-                            return ref_response.text
+            if best_match and best_similarity > 0.8:  # Adjust the threshold as needed
+                doi = best_match.get("DOI")
+                if doi:
+                    return fetch_reference_by_doi(doi, format)
         return None
     except Exception as e:
-        logging.error(f"Error in search_crossref_for_reference for '{title}': {e}")
+        logging.error(f"Error in search_crossref_for_reference_by_title for '{title}': {e}")
         return None
 
-def process_search(titles, format):
+def fetch_reference_by_doi(doi, format):
+    try:
+        if format == "BibTeX":
+            ref_url = f"https://doi.org/{doi}"
+            ref_headers = {"Accept": "application/x-bibtex"}
+        elif format == "RIS":
+            ref_url = f"https://doi.org/{doi}"
+            ref_headers = {"Accept": "application/x-research-info-systems"}
+        elif format == "Vancouver":
+            ref_url = f"https://doi.org/{doi}"
+            ref_headers = {"Accept": "text/x-bibliography; style=vancouver"}
+        elif format == "MLA":
+            ref_url = f"https://doi.org/{doi}"
+            ref_headers = {"Accept": "text/x-bibliography; style=mla"}
+
+        ref_response = requests.get(ref_url, headers=ref_headers)
+        logging.info(f"Reference response for DOI '{doi}': {ref_response.status_code} - {ref_response.text}")
+
+        if ref_response.status_code == 200:
+            return ref_response.text
+        return None
+    except Exception as e:
+        logging.error(f"Error in fetch_reference_by_doi for DOI '{doi}': {e}")
+        return None
+
+def process_search(titles, dois, format):
     results = {}
-    titles_list = titles.split('\n')
-    for title in titles_list:
-        title = title.strip()
-        if title:
-            ref_entry = search_crossref_for_reference(title, format)
-            if ref_entry:
-                results[title] = ref_entry
-            else:
-                results[title] = f"No {format} entry found for this title."
+
+    if titles:
+        titles_list = titles.split('\n')
+        for title in titles_list:
+            title = title.strip()
+            if title:
+                ref_entry = search_crossref_for_reference_by_title(title, format)
+                if ref_entry:
+                    results[title] = ref_entry
+                else:
+                    results[title] = f"No {format} entry found for this title."
+
+    if dois:
+        dois_list = dois.split('\n')
+        for doi in dois_list:
+            doi = doi.strip()
+            if doi:
+                ref_entry = fetch_reference_by_doi(doi, format)
+                if ref_entry:
+                    results[doi] = ref_entry
+                else:
+                    results[doi] = f"No {format} entry found for this DOI."
+
     return results
 
 def generate_file_content(results, format):
@@ -77,9 +110,10 @@ def generate_file_content(results, format):
 def index():
     if request.method == 'POST':
         titles = request.form.get('titles')
+        dois = request.form.get('dois')
         format = request.form.get('format')
-        if titles and format:
-            results = process_search(titles, format)
+        if (titles or dois) and format:
+            results = process_search(titles, dois, format)
             file_content = generate_file_content(results, format)
             file_name = f"references.{format.lower()}.txt"
             with open(file_name, "w") as file:
@@ -94,8 +128,9 @@ def download_file(file_name):
 @app.route('/bibtex', methods=['POST'])
 def bibtex_search():
     titles = request.form.get('titles')
-    if titles:
-        results = process_search(titles, "BibTeX")
+    dois = request.form.get('dois')
+    if titles or dois:
+        results = process_search(titles, dois, "BibTeX")
         file_content = generate_file_content(results, "BibTeX")
         file_name = "references.bibtex.txt"
         with open(file_name, "w") as file:
@@ -106,8 +141,9 @@ def bibtex_search():
 @app.route('/ris', methods=['POST'])
 def ris_search():
     titles = request.form.get('titles')
-    if titles:
-        results = process_search(titles, "RIS")
+    dois = request.form.get('dois')
+    if titles or dois:
+        results = process_search(titles, dois, "RIS")
         file_content = generate_file_content(results, "RIS")
         file_name = "references.ris.txt"
         with open(file_name, "w") as file:
@@ -118,8 +154,9 @@ def ris_search():
 @app.route('/vancouver', methods=['POST'])
 def vancouver_search():
     titles = request.form.get('titles')
-    if titles:
-        results = process_search(titles, "Vancouver")
+    dois = request.form.get('dois')
+    if titles or dois:
+        results = process_search(titles, dois, "Vancouver")
         file_content = generate_file_content(results, "Vancouver")
         file_name = "references.vancouver.txt"
         with open(file_name, "w") as file:
@@ -130,8 +167,9 @@ def vancouver_search():
 @app.route('/mla', methods=['POST'])
 def mla_search():
     titles = request.form.get('titles')
-    if titles:
-        results = process_search(titles, "MLA")
+    dois = request.form.get('dois')
+    if titles or dois:
+        results = process_search(titles, dois, "MLA")
         file_content = generate_file_content(results, "MLA")
         file_name = "references.mla.txt"
         with open(file_name, "w") as file:
