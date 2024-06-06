@@ -1,7 +1,8 @@
 import os
 import requests
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, send_file
 import logging
+from io import StringIO
 
 app = Flask(__name__)
 
@@ -32,6 +33,9 @@ def search_crossref_for_reference(title, format):
                     elif format == "Vancouver":
                         ref_url = f"https://doi.org/{doi}"
                         ref_headers = {"Accept": "text/x-bibliography; style=vancouver"}
+                    elif format == "MLA":
+                        ref_url = f"https://doi.org/{doi}"
+                        ref_headers = {"Accept": "text/x-bibliography; style=mla"}
 
                     ref_response = requests.get(ref_url, headers=ref_headers)
                     logging.info(f"Reference response for '{title}': {ref_response.status_code} - {ref_response.text}")
@@ -56,6 +60,12 @@ def process_search(titles, format):
                 results[title] = f"No {format} entry found for this title."
     return results
 
+def generate_file_content(results, format):
+    file_content = ""
+    for title, ref in results.items():
+        file_content += f"{ref}\n\n"
+    return file_content
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -63,15 +73,27 @@ def index():
         format = request.form.get('format')
         if titles and format:
             results = process_search(titles, format)
-            return render_template('index.html', results=results, format=format)
+            file_content = generate_file_content(results, format)
+            file_name = f"references.{format.lower()}.txt"
+            with open(file_name, "w") as file:
+                file.write(file_content)
+            return render_template('index.html', results=results, format=format, file_name=file_name)
     return render_template('index.html')
+
+@app.route('/download/<file_name>')
+def download_file(file_name):
+    return send_file(file_name, as_attachment=True)
 
 @app.route('/bibtex', methods=['POST'])
 def bibtex_search():
     titles = request.form.get('titles')
     if titles:
         results = process_search(titles, "BibTeX")
-        return render_template('index.html', results=results, format="BibTeX")
+        file_content = generate_file_content(results, "BibTeX")
+        file_name = "references.bibtex.txt"
+        with open(file_name, "w") as file:
+            file.write(file_content)
+        return render_template('index.html', results=results, format="BibTeX", file_name=file_name)
     return render_template('index.html')
 
 @app.route('/ris', methods=['POST'])
@@ -79,7 +101,11 @@ def ris_search():
     titles = request.form.get('titles')
     if titles:
         results = process_search(titles, "RIS")
-        return render_template('index.html', results=results, format="RIS")
+        file_content = generate_file_content(results, "RIS")
+        file_name = "references.ris.txt"
+        with open(file_name, "w") as file:
+            file.write(file_content)
+        return render_template('index.html', results=results, format="RIS", file_name=file_name)
     return render_template('index.html')
 
 @app.route('/vancouver', methods=['POST'])
@@ -87,7 +113,23 @@ def vancouver_search():
     titles = request.form.get('titles')
     if titles:
         results = process_search(titles, "Vancouver")
-        return render_template('index.html', results=results, format="Vancouver")
+        file_content = generate_file_content(results, "Vancouver")
+        file_name = "references.vancouver.txt"
+        with open(file_name, "w") as file:
+            file.write(file_content)
+        return render_template('index.html', results=results, format="Vancouver", file_name=file_name)
+    return render_template('index.html')
+
+@app.route('/mla', methods=['POST'])
+def mla_search():
+    titles = request.form.get('titles')
+    if titles:
+        results = process_search(titles, "MLA")
+        file_content = generate_file_content(results, "MLA")
+        file_name = "references.mla.txt"
+        with open(file_name, "w") as file:
+            file.write(file_content)
+        return render_template('index.html', results=results, format="MLA", file_name=file_name)
     return render_template('index.html')
 
 if __name__ == '__main__':

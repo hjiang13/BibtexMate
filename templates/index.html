@@ -37,6 +37,7 @@
                         <button formaction="/bibtex" formmethod="post" class="btn btn-primary">BibTeX Search</button>
                         <button formaction="/ris" formmethod="post" class="btn btn-secondary">RIS Search</button>
                         <button formaction="/vancouver" formmethod="post" class="btn btn-success">Vancouver Search</button>
+                        <button formaction="/mla" formmethod="post" class="btn btn-info">MLA Search</button>
                     </div>
                 </form>
                 {% if results %}
@@ -52,6 +53,11 @@
                             </div>
                         </div>
                     {% endfor %}
+                    {% if file_name %}
+                        <div class="text-center mt-4">
+                            <a href="/download/{{ file_name }}" class="btn btn-outline-primary">Download {{ format }} File</a>
+                        </div>
+                    {% endif %}
                 {% elif error %}
                     <p class="text-danger">{{ error }}</p>
                 {% endif %}
