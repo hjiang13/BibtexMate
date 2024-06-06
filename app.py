@@ -4,11 +4,27 @@ from flask import Flask, request, render_template, send_file
 import logging
 from io import StringIO
 from difflib import SequenceMatcher
+import json
 
 app = Flask(__name__)
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
+
+# Initialize visit count and visitor log
+visit_count = 0
+visitor_log = []
+
+def get_visitor_location(ip):
+    try:
+        response = requests.get(f"https://ipinfo.io/{ip}/json")
+        if response.status_code == 200:
+            data = response.json()
+            location = data.get("city", "Unknown city") + ", " + data.get("country", "Unknown country")
+            return location
+    except Exception as e:
+        logging.error(f"Error getting location for IP '{ip}': {e}")
+    return "Unknown location"
 
 def normalize_title(title):
     return title.lower().strip()
@@ -108,6 +124,17 @@ def generate_file_content(results, format):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    global visit_count
+    global visitor_log
+
+    # Increment visit count
+    visit_count += 1
+
+    # Log visitor's IP and location
+    visitor_ip = request.remote_addr
+    visitor_location = get_visitor_location(visitor_ip)
+    visitor_log.append({"ip": visitor_ip, "location": visitor_location})
+
     if request.method == 'POST':
         titles = request.form.get('titles')
         dois = request.form.get('dois')
@@ -118,8 +145,8 @@ def index():
             file_name = f"references.{format.lower()}.txt"
             with open(file_name, "w") as file:
                 file.write(file_content)
-            return render_template('index.html', results=results, format=format, file_name=file_name)
-    return render_template('index.html')
+            return render_template('index.html', results=results, format=format, file_name=file_name, visit_count=visit_count, visitor_log=visitor_log)
+    return render_template('index.html', visit_count=visit_count, visitor_log=visitor_log)
 
 @app.route('/download/<file_name>')
 def download_file(file_name):
@@ -135,8 +162,8 @@ def bibtex_search():
         file_name = "references.bibtex.txt"
         with open(file_name, "w") as file:
             file.write(file_content)
-        return render_template('index.html', results=results, format="BibTeX", file_name=file_name)
-    return render_template('index.html')
+        return render_template('index.html', results=results, format="BibTeX", file_name=file_name, visit_count=visit_count, visitor_log=visitor_log)
+    return render_template('index.html', visit_count=visit_count, visitor_log=visitor_log)
 
 @app.route('/ris', methods=['POST'])
 def ris_search():
@@ -148,8 +175,8 @@ def ris_search():
         file_name = "references.ris.txt"
         with open(file_name, "w") as file:
             file.write(file_content)
-        return render_template('index.html', results=results, format="RIS", file_name=file_name)
-    return render_template('index.html')
+        return render_template('index.html', results=results, format="RIS", file_name=file_name, visit_count=visit_count, visitor_log=visitor_log)
+    return render_template('index.html', visit_count=visit_count, visitor_log=visitor_log)
 
 @app.route('/vancouver', methods=['POST'])
 def vancouver_search():
@@ -161,8 +188,8 @@ def vancouver_search():
         file_name = "references.vancouver.txt"
         with open(file_name, "w") as file:
             file.write(file_content)
-        return render_template('index.html', results=results, format="Vancouver", file_name=file_name)
-    return render_template('index.html')
+        return render_template('index.html', results=results, format="Vancouver", file_name=file_name, visit_count=visit_count, visitor_log=visitor_log)
+    return render_template('index.html', visit_count=visit_count, visitor_log=visitor_log)
 
 @app.route('/mla', methods=['POST'])
 def mla_search():
@@ -174,8 +201,8 @@ def mla_search():
         file_name = "references.mla.txt"
         with open(file_name, "w") as file:
             file.write(file_content)
-        return render_template('index.html', results=results, format="MLA", file_name=file_name)
-    return render_template('index.html')
+        return render_template('index.html', results=results, format="MLA", file_name=file_name, visit_count=visit_count, visitor_log=visitor_log)
+    return render_template('index.html', visit_count=visit_count, visitor_log=visitor_log)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
